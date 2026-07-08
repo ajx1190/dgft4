@@ -44,7 +44,7 @@ public class OrmMasterService {
         // Save History Snapshot
         createHistorySnapshot(record, "CANCELLED");
         
-        // Simulating the logic: mark as cancelled instead of hard deleting
+        // cancelled instead of hard deleting
         record.setStatus("CANCELLED");
         record.setFlag("C");
         record.setDgftFlag("C");

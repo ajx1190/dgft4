@@ -47,7 +47,7 @@ public class EntityMapper {
         OrmMessageDetailResponse dto = new OrmMessageDetailResponse();
         dto.setId(entity.getId());
         if (entity.getDgftOrmMessageMaster() != null) dto.setDgftOrmMessageMasterId(entity.getDgftOrmMessageMaster().getId());
-        // dgftOrmMaster relationship is not explicitly mapped in Detail entity, we rely on ormNumber instead if needed
+        
         dto.setStatus(entity.getStatus());
         dto.setAddedBy(entity.getAddedBy());
         if (entity.getAddedDate() != null) dto.setAddedDate(entity.getAddedDate());

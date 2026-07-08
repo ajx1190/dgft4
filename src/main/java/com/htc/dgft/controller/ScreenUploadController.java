@@ -2,6 +2,8 @@ package com.htc.dgft.controller;
 
 import com.htc.dgft.service.ScreenUploadService;
 import lombok.RequiredArgsConstructor;
+
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -17,7 +19,7 @@ public class ScreenUploadController {
 
     private final ScreenUploadService screenUploadService;
 
-    @PostMapping(value = "/orm", consumes = org.springframework.http.MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PostMapping(value = "/orm", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @PreAuthorize("hasAnyRole('ADMIN', 'MAKER')")
     public ResponseEntity<String> uploadOrmCsv(@RequestParam("file") MultipartFile file) {
         String result = screenUploadService.processCsvUpload(file);

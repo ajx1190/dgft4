@@ -54,7 +54,7 @@ public class ScreenUploadService {
 
             while ((line = reader.readLine()) != null) {
                 if (isFirstLine) {
-                    isFirstLine = false; // Skip header
+                    isFirstLine = false;
                     lineNumber++;
                     continue;
                 }
@@ -107,7 +107,6 @@ public class ScreenUploadService {
                         continue;
                     }
 
-                    // 2. Programmatic Date Comparison Check
                     if (dto.getOrmDate() != null && dto.getOrmIssueDate() != null && dto.getOrmDate().isAfter(dto.getOrmIssueDate())) {
                         ackLogs.add("Line " + lineNumber + " [" + dto.getOrmNumber() + "] - FAILED: ORM Date cannot be after ORM Issue Date; ");
                         failedCount++;
@@ -115,7 +114,6 @@ public class ScreenUploadService {
                         continue;
                     }
 
-                    // 3. Database Check: Purpose Code must exist
                     if (purposeCodeMasterRepository.findByCode(purposeCode).isEmpty()) {
                         ackLogs.add("Line " + lineNumber + " [" + dto.getOrmNumber() + "] - FAILED: Purpose Code " + purposeCode + " is invalid.");
                         failedCount++;
@@ -123,13 +121,11 @@ public class ScreenUploadService {
                         continue;
                     }
 
-                    // 4. Map to Entity
                     DgftOrmMaster orm = ormMapper.toEntity(dto);
 
-                    // Default values for a fresh record
                     orm.setStatus("ACTIVE");
-                    orm.setFlag("N"); // N implies workflow required
-                    orm.setDgftFlag("F"); // F for Fresh
+                    orm.setFlag("N"); 
+                    orm.setDgftFlag("F"); 
                     orm.setDgftStatus("Awaiting request initiated");
 
                     validRecords.add(orm);

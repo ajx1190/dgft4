@@ -11,17 +11,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-/**
- * Controller for the DGFT API Push Service Scheduler (Third Instruction).
- * Provides endpoint to manually trigger the API push scheduler that processes
- * batches from staging tables and updates statuses as per the third instruction.
- *
- * Returns the simulated request/response JSON for each processed batch so the
- * caller can see exactly what was "sent to" and "received from" the (mock) DGFT API.
- *
- * This endpoint is separate from the existing QuartzTriggerController to avoid
- * conflicts with the first and second instruction schedulers.
- */
 @RestController
 @RequestMapping("/api/dgft-push")
 public class DgftApiPushController {
@@ -31,19 +20,7 @@ public class DgftApiPushController {
     public DgftApiPushController(DgftApiPushService apiPushService) {
         this.apiPushService = apiPushService;
     }
-
-    /**
-     * Manual trigger endpoint for the DGFT API push scheduler.
-     * Processes batches from staging table and simulates API push.
-     *
-     * Updates statuses according to third instruction:
-     * - DGFT_IRM_MESSAGE_MASTER.DGFT_ACK_STATUS = "Validated"
-     * - DGFT_IRM_MESSAGE_MASTER.STATUS = "MSG_PUSH_SUCCESS"
-     * - DGFT_IRM_MESSAGE_DETAIL.STATUS = "PENDING"
-     * - DGFT_IRM_MESSAGE_DETAIL.DGFT_ACK_STATUS = null
-     *
-     * @return List of request/response JSON for each processed batch
-     */
+    
     @PostMapping("/trigger-api-push")
     public ResponseEntity<Object> triggerApiPush() {
         try {

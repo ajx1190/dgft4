@@ -9,4 +9,5 @@ public interface DgftOrmMasterRepository extends JpaRepository<DgftOrmMaster, St
     List<DgftOrmMaster> findByDgftStatus(String dgftStatus);
     List<DgftOrmMaster> findByStatusAndDgftStatus(String status, String dgftStatus);
     List<DgftOrmMaster> findTop20ByDgftStatusOrderByAddedDateAsc(String dgftStatus);
+    List<DgftOrmMaster> findByBankUniqueTransactionId(String bankUniqueTransactionId);
 }

@@ -109,7 +109,7 @@ public class DgftOrmMaster extends BaseEntity {
     @Column(name = "CHECKER_REMARKS", length = 250)
     private String checkerRemarks;
 
-    @Column(name = "BANK_UNIQUE_TRANSACTION_ID", length = 100) // Increased slightly for UUID usage
+    @Column(name = "BANK_UNIQUE_TRANSACTION_ID", length = 100)
     private String bankUniqueTransactionId;
 
     @Column(name = "REFERENCE_IRM", length = 50)
@@ -128,7 +128,7 @@ public class DgftOrmMaster extends BaseEntity {
     @Column(name = "DGFT_STATUS", length = 250)
     private String dgftStatus;
 
-    @Column(name = "PROCESS_STATUS", length = 50) // Adjust length
+    @Column(name = "PROCESS_STATUS", length = 50)
     private String processStatus;
 
     @Column(name = "MASTER_DETAIL_STATUS", length = 50)

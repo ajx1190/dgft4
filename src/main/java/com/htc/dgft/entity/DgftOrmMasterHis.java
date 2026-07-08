@@ -28,7 +28,6 @@ public class DgftOrmMasterHis extends BaseEntity {
     @Column(name = "TRIGGER_STATUS", length = 20)
     private String triggerStatus;
 
-    // Remaining fields mirror the DgftOrmMaster table fields
     @Column(name = "ORM_NUMBER", length = 50)
     private String ormNumber;
 

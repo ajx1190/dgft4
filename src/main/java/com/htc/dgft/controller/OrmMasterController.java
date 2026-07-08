@@ -1,6 +1,7 @@
 package com.htc.dgft.controller;
 
 import com.htc.dgft.entity.DgftOrmMaster;
+import com.htc.dgft.dto.request.DgftOrmMasterRequest;
 import com.htc.dgft.dto.response.DgftOrmMasterResponseVO;
 import com.htc.dgft.mapper.OrmMapper;
 import com.htc.dgft.service.OrmMasterService;
@@ -40,7 +41,7 @@ public class OrmMasterController {
 
     @PostMapping
     @PreAuthorize("hasAnyRole('ADMIN', 'MAKER')")
-    public ResponseEntity<DgftOrmMasterResponseVO> createRecord(@jakarta.validation.Valid @RequestBody com.htc.dgft.dto.request.DgftOrmMasterRequest request) {
+    public ResponseEntity<DgftOrmMasterResponseVO> createRecord(@jakarta.validation.Valid @RequestBody DgftOrmMasterRequest request) {
         DgftOrmMaster entity = ormMapper.toEntity(request);
         DgftOrmMaster savedEntity = ormMasterService.createRecord(entity);
         return ResponseEntity.ok(ormMapper.toResponseVO(savedEntity));
