@@ -1,5 +1,6 @@
 package com.htc.dgft.service;
 
+import com.htc.dgft.dto.response.DgftApiPushBatchResponse;
 import com.htc.dgft.entity.DgftOrmMessageDetail;
 import com.htc.dgft.entity.DgftOrmMessageMaster;
 import com.htc.dgft.entity.DgftOrmMsgTxStatusLog;
@@ -12,19 +13,22 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.UUID;
 
 /**
- * Service class handling API push operations for DGFT
+ * Service class handling API push operations for DGFT (Instruction 3).
  *
- * This service:
- * 1. Processes batches from staging table
- * 2. Simulates API push with mock responses
- * 3. Updates entity statuses correctly
- * 4. Logs transaction status
+ * Pulls batches from the staging table (dgft_orm_message_master with status
+ * 'MSG_PUSH_NEW' - created by the earlier instruction), simulates a DGFT API
+ * push, and updates the staging statuses as per the third instruction:
+ *
+ *   dgft_orm_message_master : DGFT_ACK_STATUS = "Validated", STATUS = "MSG_PUSH_SUCCESS"
+ *   dgft_orm_message_detail  : STATUS = "PENDING", DGFT_ACK_STATUS = null
+ *
+ * The method returns the generated request/response JSON for each batch so the
+ * caller (REST endpoint) can display exactly what was "sent to" / "received from"
+ * the (mock) DGFT API.
  */
 @Slf4j
 @Service
@@ -36,74 +40,117 @@ public class DgftApiPushService {
     private final DgftOrmMsgTxStatusLogRepository logRepo;
     private final ObjectMapper objectMapper;
 
+    /**
+     * Process up to 20 batches (message masters) that are awaiting a DGFT push.
+     *
+     * @return list of per-batch request/response JSON that was persisted to the DB
+     */
     @Transactional
-    public void processBatchFromStaging() {
-        // Step 1: Fetch 20 records with status 'CREATED'
-//        List<DgftOrmMessageMaster> batch = messageMasterRepo.findTop20ByStatus("CREATED");
-        List<DgftOrmMessageMaster> batch = messageMasterRepo.findTop20ByStatus("MSG_PUSH_NEW");
+    public List<DgftApiPushBatchResponse> processBatchFromStaging() {
+        // Step 1: Fetch pending batches (staging records created by instruction 2)
+        List<DgftOrmMessageMaster> masters = messageMasterRepo.findTop20ByStatus("MSG_PUSH_NEW");
 
-        if (batch.isEmpty()) {
-//            log.info("No batches with CREATED status found to process");
+        if (masters.isEmpty()) {
             log.info("No batches with MSG_PUSH_NEW status found to process");
-            return;
+            return List.of();
         }
 
-        // Step 2: Create/update message master entry
-        String transactionId = "TXN-" + UUID.randomUUID().toString().substring(0, 15).toUpperCase();
-        DgftOrmMessageMaster master = batch.get(0); // Use existing master record
+        List<DgftApiPushBatchResponse> results = new ArrayList<>();
 
-        try {
-            // Convert batch to JSON for request payload
-            master.setRequestJsonObj(objectMapper.writeValueAsString(batch));
-        } catch (Exception e) {
-            log.error("Failed to serialize batch to JSON", e);
-            master.setRequestJsonObj("{}");
+        for (DgftOrmMessageMaster master : masters) {
+            // Step 2: Build the simulated API "request" payload from this batch's details
+            List<DgftOrmMessageDetail> details = detailRepo.findByDgftOrmMessageMasterId(master.getId());
+            String requestJson = buildRequestJson(master, details);
+            master.setRequestJsonObj(requestJson);
+
+            // Step 3: Simulate the DGFT API response
+            String responseJson = simulateApiResponse(master, details.size());
+
+            // Step 4: Apply third-instruction status updates to the master
+            master.setDgftAckStatus("Validated");
+            master.setStatus("MSG_PUSH_SUCCESS");
+            master.setResponseJsonObj(responseJson);
+            master = messageMasterRepo.save(master);
+
+            // Step 5: Apply third-instruction status updates to the details
+            details.forEach(detail -> {
+                detail.setStatus("PENDING");
+                detail.setDgftAckStatus(null); // remains null as per specification
+            });
+            detailRepo.saveAll(details);
+
+            // Step 6: Log the simulated transaction status
+            DgftOrmMsgTxStatusLog logEntry = new DgftOrmMsgTxStatusLog();
+            logEntry.setDgftOrmMessageMaster(master);
+            logEntry.setDgftTxStatusJsonObj(responseJson);
+            logRepo.save(logEntry);
+
+            results.add(new DgftApiPushBatchResponse(
+                    master.getId(),
+                    master.getUniqueTxId(),
+                    requestJson,
+                    responseJson
+            ));
         }
 
-        master = messageMasterRepo.save(master);
-
-        // Step 3: Get existing details
-        List<DgftOrmMessageDetail> details = detailRepo.findByDgftOrmMessageMasterId(master.getId());
-
-        // Step 4: Simulate API response
-        String mockResponse = simulateApiResponse(batch, transactionId);
-
-        // Step 5: Update master with response (third instruction updates)
-        master.setDgftAckStatus("Validated");
-        master.setStatus("MSG_PUSH_SUCCESS");
-        master.setResponseJsonObj(mockResponse);
-        master = messageMasterRepo.save(master);
-
-        // Step 6: Update details (third instruction updates)
-        details.forEach(detail -> {
-            detail.setStatus("PENDING");
-            // DGFT_ACK_STATUS remains null as per specification
-        });
-        detailRepo.saveAll(details);
-
-        // Step 7: Log transaction status
-        DgftOrmMsgTxStatusLog logEntry = new DgftOrmMsgTxStatusLog();
-        logEntry.setDgftOrmMessageMaster(master);
-        logEntry.setDgftTxStatusJsonObj(mockResponse);
-        logRepo.save(logEntry);
-
-        log.info("Successfully processed batch with {} records", batch.size());
+        log.info("Successfully processed {} batches", masters.size());
+        return results;
     }
 
     /**
-     * Generates a mock API response
-     * @param batch of records
-     * @param transactionId the transaction ID
-     * @return JSON string
+     * Builds the JSON request body that would be posted to the DGFT API for a batch.
+     * Mirrors the structure stored in REQUEST_JSON_OBJ.
      */
-    private String simulateApiResponse(List<DgftOrmMessageMaster> batch, String transactionId) {
-        StringBuilder response = new StringBuilder();
-        response.append("{\n");
-        response.append("  \"status\": \"SUCCESS\",\n");
-        response.append("  \"batchId\": \"").append(transactionId).append("\",\n");
-        response.append("  \"processed\": true,\n");
-        response.append("  \"recordCount\": ").append(batch.size()).append("\n");
-        response.append("}");
-        return response.toString();
+    private String buildRequestJson(DgftOrmMessageMaster master, List<DgftOrmMessageDetail> details) {
+        try {
+            ApiRequestPayload payload = new ApiRequestPayload(
+                    master.getUniqueTxId(),
+                    details.size(),
+                    details
+            );
+            return objectMapper.writeValueAsString(payload);
+        } catch (Exception e) {
+            log.error("Failed to serialize request payload to JSON", e);
+            return "{}";
+        }
+    }
+
+    /**
+     * Generates a mock DGFT API response JSON for a batch.
+     */
+    private String simulateApiResponse(DgftOrmMessageMaster master, int recordCount) {
+        try {
+            ApiResponsePayload response = new ApiResponsePayload(
+                    "SUCCESS",
+                    "Validated",
+                    "MSG_PUSH_SUCCESS",
+                    master.getUniqueTxId(),
+                    recordCount,
+                    "IRM records received and validated by DGFT"
+            );
+            return objectMapper.writeValueAsString(response);
+        } catch (Exception e) {
+            log.error("Failed to serialize response payload to JSON", e);
+            return "{\"status\":\"SUCCESS\"}";
+        }
+    }
+
+    /** Mock request body posted to the (simulated) DGFT API. */
+    private record ApiRequestPayload(
+            String uniqueTxId,
+            int recordCount,
+            List<DgftOrmMessageDetail> records
+    ) {
+    }
+
+    /** Mock response body returned by the (simulated) DGFT API. */
+    private record ApiResponsePayload(
+            String status,
+            String dgftAckStatus,
+            String messageMasterStatus,
+            String uniqueTxId,
+            int batchSize,
+            String acknowledgement
+    ) {
     }
 }
