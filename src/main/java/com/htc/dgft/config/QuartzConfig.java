@@ -63,7 +63,8 @@ public class QuartzConfig {
         return TriggerBuilder.newTrigger()
                 .forJob(enquiryJobDetail)
                 .withIdentity("dgftEnquiryTrigger", "dgftGroup")
-                .withSchedule(CronScheduleBuilder.cronSchedule("0 0 1 * * ?")) // Daily at 1:00 AM
+                .withSchedule(CronScheduleBuilder.cronSchedule("0/30 * * * * ?"))
+//                .withSchedule(CronScheduleBuilder.cronSchedule("0 0 1 * * ?")) // Daily at 1:00 AM
                 .build();
     }
 }
