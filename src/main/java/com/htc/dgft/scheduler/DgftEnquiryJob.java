@@ -44,11 +44,11 @@ public class DgftEnquiryJob implements Job {
     @Transactional
     public void execute(JobExecutionContext context) throws JobExecutionException {
         try {
-            log.info("Starting DGFT IRM Enquiry Job execution");
+            log.info("Starting DGFT ORM Enquiry Job execution");
             int updated = processEnquiry();
-            log.info("DGFT IRM Enquiry Job completed. Updated {} ORM master records", updated);
+            log.info("DGFT ORM Enquiry Job completed. Updated {} ORM master records", updated);
         } catch (Exception e) {
-            log.error("Error executing DGFT IRM Enquiry Job", e);
+            log.error("Error executing DGFT ORM Enquiry Job", e);
             throw new JobExecutionException("Enquiry batch failed", e, false);
         }
     }
